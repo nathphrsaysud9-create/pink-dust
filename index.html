@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Pink Dust Heart</title>
+  <style>
+    :root {
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+      --border-radius-lg: 12px;
+      --primary-pink: #FF1493;
+      --accent-pink: #FF69B4;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0a0a0f 0%, #1a0a15 50%, #0f0510 100%);
+      font-family: var(--font-sans);
+      color: #fff;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 900px;
+      height: 100vh;
+      gap: 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 10px;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #FF69B4, #FFB6C1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .header p {
+      font-size: 13px;
+      color: rgba(255, 182, 193, 0.7);
+      letter-spacing: 0.05em;
+      font-weight: 400;
+    }
+
+    #wrap {
+      position: relative;
+      width: 100%;
+      flex: 1;
+      max-height: 600px;
+      border-radius: var(--border-radius-lg);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(255, 20, 147, 0.15), 0 0 40px rgba(255, 105, 180, 0.1);
+      border: 1px solid rgba(255, 182, 193, 0.15);
+      background: radial-gradient(ellipse at center, rgba(20, 5, 15, 0.9) 0%, rgba(10, 0, 5, 0.95) 100%);
+    }
+
+    #c {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #c.grabbing {
+      cursor: grabbing;
+    }
+
+    #hint {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: rgba(255, 100, 160, 0.5);
+      pointer-events: none;
+      letter-spacing: 0.05em;
+      transition: opacity 1s ease-out;
+      white-space: nowrap;
+      font-weight: 500;
+    }
+
+    #msg {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: var(--font-sans);
+      font-size: 16px;
+      color: rgba(255, 120, 180, 0);
+      pointer-events: none;
+      letter-spacing: 0.14em;
+      transition: color 0.5s ease-out;
+      white-space: nowrap;
+      font-weight: 500;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255, 182, 193, 0.5);
+      margin-top: 10px;
+      animation: fadeIn 1.2s ease-out;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .header h1 {
+        font-size: 22px;
+      }
+
+      .header p {
+        font-size: 12px;
+      }
+
+      #msg {
+        font-size: 14px;
+      }
+
+      #hint {
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>✨ Pink Dust Heart ✨</h1>
+      <p>Interactive Canvas Experience</p>
+    </div>
+
+    <h2 class="sr-only">Interactive pink dust canvas. Hold to gather into solid heart, drag to move, release to explode.</h2>
+    
+    <div id="wrap">
+      <canvas id="c"></canvas>
+      <div id="hint">กดค้าง = รวมหัวใจ · ลากขณะกด = ย้าย · ปล่อย = ระเบิด</div>
+      <div id="msg">you are loved ♡</div>
+    </div>
+
+    <div class="footer">
+      <p>Hold • Drag • Release</p>
+    </div>
+  </div>
+
+  <script>
+    const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+    const hint=document.getElementById('hint'),msg=document.getElementById('msg');
+    let W,H,held=false,particles=[],hx,hy,dragging=false,lastMx=0,lastMy=0;
+    let bgGlow=0,gatherProgress=0;
+    const COLORS=['#FF1493','#FF2E93','#FF69B4','#FFB6C1','#D43F8D','#FF4DAA','#FF85C2','#FF3399'];
+    const N=4000;
+    const ST={F:0,G:1,E:2};
+    let pulseT=0,targets=[];
+
+    function resize(){
+      const r=canvas.getBoundingClientRect();
+      W=canvas.width=r.width*devicePixelRatio;
+      H=canvas.height=r.height*devicePixelRatio;
+      canvas.style.width=r.width+'px';
+      canvas.style.height=r.height+'px';
+      hx=W/2;hy=H/2;
+    }
+
+    function insideHeart(nx,ny){
+      const v=nx*nx+ny*ny-1;
+      return v*v*v - nx*nx*ny*ny*ny <= 0;
+    }
+
+    function heartScale(){return Math.min(W,H)*0.018;}
+
+    function buildTargets(){
+      targets=[];
+      let seed=42;
+      function rand(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
+      const bx=1.25,by=1.35;
+      while(targets.length<N){
+        const nx=(rand()*2-1)*bx;
+        const ny=(rand()*2-1)*by;
+        if(insideHeart(nx,ny)) targets.push({rx:nx,ry:ny});
+      }
+    }
+
+    function getTarget(i){
+      const sc=heartScale();
+      const t=targets[i]||{rx:0,ry:0};
+      return{x:hx+t.rx*sc*13, y:hy-(t.ry-0.125)*sc*13};
+    }
+
+    function mkP(i){
+      return{
+        x:Math.random()*W,y:Math.random()*H,
+        vx:(Math.random()-0.5)*0.5,vy:(Math.random()-0.5)*0.5,
+        phase:Math.random()*Math.PI*2,
+        col:COLORS[Math.floor(Math.random()*COLORS.length)],
+        size:(Math.random()*0.85+0.22)*devicePixelRatio,
+        alpha:Math.random()*0.4+0.6,
+        state:ST.F,idx:i
+      };
+    }
+
+    function init(){buildTargets();particles=[];for(let i=0;i<N;i++)particles.push(mkP(i));}
+
+    function update(){
+      pulseT+=0.045;
+      const pulse=held?(1+Math.sin(pulseT)*0.05):1;
+      let gathered=0,totalG=0;
+
+      for(let p of particles){
+        if(p.state===ST.F){
+          p.phase+=0.009;
+          p.vx+=(Math.random()-0.5)*0.055;p.vy+=(Math.random()-0.5)*0.055;
+          p.vx*=0.97;p.vy*=0.97;
+          p.x+=p.vx+Math.sin(p.phase)*0.35;p.y+=p.vy+Math.cos(p.phase*0.7)*0.3;
+          if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;
+        } else if(p.state===ST.G){
+          totalG++;
+          const sc=heartScale()*pulse;
+          const t=targets[p.idx]||{rx:0,ry:0};
+          const tx=hx+t.rx*sc*13, ty=hy-(t.ry-0.125)*sc*13;
+          const dx=tx-p.x,dy=ty-p.y,dist=Math.sqrt(dx*dx+dy*dy)||1;
+          if(dist<3*devicePixelRatio)gathered++;
+          const force=Math.min(2.0,dist*0.18);
+          p.vx+=dx/dist*force;p.vy+=dy/dist*force;
+          p.vx*=0.48;p.vy*=0.48;
+          p.x+=p.vx;p.y+=p.vy;
+          p.alpha=Math.min(1,p.alpha+0.12);
+        } else if(p.state===ST.E){
+          p.vx*=0.955;p.vy*=0.955;p.x+=p.vx;p.y+=p.vy;p.alpha-=0.006;
+          if(Math.sqrt(p.vx*p.vx+p.vy*p.vy)<0.35&&p.alpha<0.75){
+            p.state=ST.F;p.vx=(Math.random()-0.5)*0.4;p.vy=(Math.random()-0.5)*0.4;
+            if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;
+          }
+        }
+      }
+
+      gatherProgress=totalG>0?gathered/totalG:0;
+      if(held)bgGlow=Math.min(1,bgGlow+0.012);
+      else bgGlow=Math.max(0,bgGlow-0.025);
+    }
+
+    function draw(){
+      ctx.clearRect(0,0,W,H);
+      const intensity=bgGlow*Math.min(1,gatherProgress);
+      const br=Math.floor(5+intensity*20);
+      ctx.fillStyle=`rgb(${br},${Math.floor(br*0.35)},${Math.floor(br*0.65)})`;
+      ctx.fillRect(0,0,W,H);
+      if(intensity>0.05){
+        const g=ctx.createRadialGradient(hx,hy,0,hx,hy,Math.min(W,H)*0.8);
+        g.addColorStop(0,`rgba(230,20,90,${intensity*0.6})`);
+        g.addColorStop(0.45,`rgba(160,5,60,${intensity*0.38})`);
+        g.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+      }
+      const vig=ctx.createRadialGradient(W/2,H/2,H*0.05,W/2,H/2,H*0.85);
+      vig.addColorStop(0,'rgba(0,0,0,0)');
+      vig.addColorStop(1,`rgba(10,0,5,${0.6-intensity*0.35})`);
+      ctx.fillStyle=vig;ctx.fillRect(0,0,W,H);
+
+      for(let p of particles){
+        if(p.alpha<=0.02)continue;
+        ctx.save();
+        ctx.globalAlpha=p.alpha;ctx.fillStyle=p.col;
+        ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();
+        ctx.globalAlpha=p.alpha*0.10;
+        ctx.beginPath();ctx.arc(p.x,p.y,p.size*2.5,0,Math.PI*2);ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function loop(){update();draw();requestAnimationFrame(loop);}
+
+    function getPos(e){
+      const r=canvas.getBoundingClientRect(),dpr=devicePixelRatio;
+      if(e.touches)return{x:(e.touches[0].clientX-r.left)*dpr,y:(e.touches[0].clientY-r.top)*dpr};
+      return{x:(e.clientX-r.left)*dpr,y:(e.clientY-r.top)*dpr};
+    }
+
+    function onDown(e){
+      e.preventDefault();const p=getPos(e);
+      held=true;dragging=false;lastMx=p.x;lastMy=p.y;
+      hint.style.opacity='0';
+      for(let pt of particles)pt.state=ST.G;
+      canvas.classList.add('grabbing');
+    }
+    function onMove(e){
+      e.preventDefault();if(!held)return;
+      const p=getPos(e);const dx=p.x-lastMx,dy=p.y-lastMy;
+      if(Math.sqrt(dx*dx+dy*dy)>3*devicePixelRatio||dragging){
+        dragging=true;
+        hx=Math.max(0,Math.min(W,hx+dx));hy=Math.max(0,Math.min(H,hy+dy));
+      }
+      lastMx=p.x;lastMy=p.y;
+    }
+    function onUp(e){
+      if(!held)return;e.preventDefault();
+      held=false;dragging=false;canvas.classList.remove('grabbing');gatherProgress=0;
+      msg.style.color='rgba(255,155,200,0.9)';
+      setTimeout(()=>{msg.style.color='rgba(255,120,180,0)';},2200);
+      setTimeout(()=>{hint.style.opacity='1';},3200);
+      for(let p of particles){
+        p.state=ST.E;
+        const dx=p.x-hx,dy=p.y-hy,dist=Math.sqrt(dx*dx+dy*dy)||1;
+        const pow=(Math.random()*10+6)*devicePixelRatio;
+        p.vx=dx/dist*pow+(Math.random()-0.5)*4;p.vy=dy/dist*pow+(Math.random()-0.5)*4;p.alpha=1;
+      }
+    }
+
+    canvas.addEventListener('mousedown',onDown);canvas.addEventListener('mousemove',onMove);
+    canvas.addEventListener('mouseup',onUp);canvas.addEventListener('mouseleave',onUp);
+    canvas.addEventListener('touchstart',onDown,{passive:false});
+    canvas.addEventListener('touchmove',onMove,{passive:false});
+    canvas.addEventListener('touchend',onUp,{passive:false});
+    window.addEventListener('resize',()=>{resize();buildTargets();});
+    resize();init();loop();
+  </script>
+</body>
+</html>
